@@ -1,0 +1,12 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build.js",
+  "scripts": {
+    "build": "tsc && node build.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

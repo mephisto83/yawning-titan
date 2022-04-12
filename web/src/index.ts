@@ -1,22 +1,35 @@
-// await yawningTitan({local: 'http://localhost:16552/', name: 'EpisodesHeader', '.episodes-header'})
+
+// await yawningTitan({ local: 'http://localhost:16552/', name: 'EpisodesHeader', className: '.episodes-header' })
 function packCss(str: string) {
-    packed_css_strings.push(str);
+    if (packed_css_strings.indexOf(str) === -1)
+        packed_css_strings.push(str);
 }
 function packUrls(str: string) {
     packed_urls.push(str);
 }
 const packed_urls: string[] = [];
 const packed_css_strings: string[] = [];
-packUrls('https://codex.nflxext.com/^3.0.0/truthBundle/webui/1.22.5-shakti-css-va968cffa/css/css/less|pages|akiraClient.less/1/a0rou4tskn5eq/none/true/none');
-packUrls('https://codex.nflxext.com/^3.0.0/truthBundle/webui/1.22.5-shakti-css-va968cffa/css/css/less|core|error-page.less/1/a0rou4tskn5eq/none/true/none');
-async function yawningTitan(args: { className: string, name: string, local: string, selector: string, depth: number }) {
+async function yawningTitan(args: {
+    pause: boolean, className: string, name: string, local: string, selector: string, depth: number
+}) {
     let {
         local,
         name = 'Component',
         className = '.class-name',
         selector = '.thisone',
-        depth = 5
+        depth = 5,
+        pause
     } = args;
+    console.log('Yawning in all the stuff!!')
+    console.log(args)
+    if (pause) {
+        console.log('pausing for 5 seconds.')
+        await (new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(true);
+            }, 5000)
+        }))
+    }
     let el = document.querySelector(selector);
     if (el) {
         let sheets = await loadStyleSheets(local);
@@ -41,10 +54,13 @@ async function yawningTitan(args: { className: string, name: string, local: stri
         { from: 'tabindex=', to: 'tabIndex=' },
         { from: 'fill-rule=', to: 'fillRule=' },
         { from: 'clip-rule=', to: 'clipRule=' },
+        { from: 'for=', to: 'htmlFor=' },
         { from: '><', to: `>\n<` },
         { from: '="0"', to: '={0}' }].forEach((item) => {
             outerHtml = (outerHtml).replaceAll(item.from, item.to)
-        })
+        });
+        outerHtml = fixImgTags(outerHtml);
+        outerHtml = fixStyle(outerHtml);
         let output = {
             css: `${className}{
                 ${unique_rules.join('\n')}
@@ -58,10 +74,12 @@ async function yawningTitan(args: { className: string, name: string, local: stri
                 );
             }`
         }
+        if (local) {
+            await storeLocal(local, {
+                data: JSON.stringify(output)
+            });
+        }
 
-        await storeLocal(local, {
-            data: JSON.stringify(output)
-        });
 
         return output;
     }
@@ -69,6 +87,7 @@ async function yawningTitan(args: { className: string, name: string, local: stri
         console.log('no element found');
     }
 }
+
 function deepYawn(el: any, cssRules: any, depth: number) {
     let rules: string[] = [];
     let elementCss = putTogetherCssRules(cssRules, el);
@@ -119,7 +138,8 @@ async function fetchPost(url: string, data: { url: string }) {
     return response.json();
 }
 function isRuleApplied(element: any, selector: string) {
-
+    if (selector.indexOf('dljDpR') !== -1)
+        console.log(selector);
     if (typeof element.matches == 'function')
         return element.matches(selector);
 
@@ -142,16 +162,20 @@ async function loadLinks(local: string) {
         let href = links[i].getAttribute('href') || '';
         if (href) {
             try {
-                let { data } = await fetchCss(local, href);
-                result.push(data);
+                if (local) {
+                    let { data } = await fetchCss(local, href);
+                    result.push(data);
+                }
             } catch (e) {
                 console.warn('didnt get ' + href);
             }
         }
     }
     for (let i = 0; i < packed_urls.length; i++) {
-        let { data } = await fetchCss(local, packed_urls[i]);
-        result.push(data);
+        if (local) {
+            let { data } = await fetchCss(local, packed_urls[i]);
+            result.push(data);
+        }
     }
     return result;
 }
@@ -163,8 +187,10 @@ async function loadSheets(local: string) {
         let href = stylesheets[i].getAttribute('href') || '';
         if (href) {
             try {
-                let { data } = await fetchCss(local, href);
-                result.push(data);
+                if (local) {
+                    let { data } = await fetchCss(local, href);
+                    result.push(data);
+                }
             } catch (e) {
                 console.warn('didnt get ' + href);
             }
@@ -183,7 +209,22 @@ async function loadStyleSheets(local: string): Promise<string[]> {
     result.push(...links);
 
     console.log(`stylesheets found: ` + result.length);
-
+    let styled = document.querySelectorAll('style[data-styled]');
+    console.log(styled);
+    console.log(styled.length);
+    for (let i = 0; i < styled.length; i++) {
+        if ((styled[i] as any).sheet && (styled[i] as any).sheet.cssRules) {
+            let rules = (styled[i] as any).sheet.cssRules
+            console.log('got styled');
+            console.log(rules)
+            if (rules) {
+                for (let j = 0; j < rules.length; j++) {
+                    console.log(rules[j].cssText)
+                    result.push(rules[j].cssText);
+                }
+            }
+        }
+    }
     return result;
 }
 function rulesForCssText(styleContent: any) {
@@ -199,26 +240,150 @@ function rulesForCssText(styleContent: any) {
 
 function putTogetherCssRules(cssRules: any[], el: Element) {
     let result: string[] = [];
-    console.log('putTogetherCssRules')
     for (let i = 0; i < cssRules.length; i++) {
         for (let j = 0; j < cssRules[i].length; j++) {
             let rule = cssRules[i][j];
             if (rule && rule.selectorText && rule.cssText) {
-                console.log(rule.selectorText);
                 if (isRuleApplied(el, rule.selectorText)) {
                     let splitSelector = rule.selectorText.split(',');
                     let selectableRule = splitSelector.filter((x: string) => {
                         return isRuleApplied(el, `${x}`.trim())
                     }).join(',')
-                    console.log(selectableRule);
+
                     rule.cssText.replace(rule.selectorText, selectableRule)
                     result.push(rule.cssText.replace(rule.selectorText, selectableRule || rule.selectorText));
                 }
             }
             else {
-                console.log('missing something')
             }
         }
     }
     return result;
+}
+
+window.yawningTitan = yawningTitan;
+((function () {
+    var yawningPopup = (window as any).chrome.runtime.connect({ name: "yawning-popup" });
+    yawningPopup.postMessage({ joke: "Knock knock" });
+    yawningPopup.onMessage.addListener(function (msg: any) {
+        console.log('popup sending message ')
+        if (msg && msg.message) {
+            switch (msg.message) {
+                case 'req-css':
+                    yawningDevtool.postMessage(msg);
+                    break;
+            }
+        }
+    });
+    (window as any).yawningPopup = yawningPopup;
+    var yawningDevtool = (window as any).chrome.runtime.connect({ name: "yawning-devtool" });
+    yawningDevtool.postMessage({ joke: "Knock knock" });
+    yawningDevtool.onMessage.addListener(function (msg: any) {
+        console.log('dev tool sending message ')
+        if (msg && msg.message) {
+            switch (msg.message) {
+                case 'css':
+                    yawningPopup.postMessage(msg);
+                    console.log(msg);
+                    if (msg && msg.css) {
+                        for (let i in msg.css) {
+                            packCss(msg.css[i]);
+                        }
+                    }
+                    break;
+            }
+        }
+    });
+}))();
+console.log('Yawning Titan injected!')
+
+function fixImgTags(outerHtml: any): any {
+    const regex = /\<img[(a-zA-Z )=":\/\-\_.0-9?&;\']*\>/gm;
+
+    // Alternative syntax using RegExp constructor
+    // const regex = new RegExp('\\<img[(a-zA-Z )=":\\/\\-\\.0-9?&;]*>', 'gm')
+
+    const str = outerHtml;
+    let m;
+    let matches: string[] = [];
+
+    while ((m = regex.exec(str)) !== null) {
+        // This is necessary to avoid infinite loops with zero-width matches
+        if (m.index === regex.lastIndex) {
+            regex.lastIndex++;
+        }
+
+        // The result can be accessed through the `m`-variable.
+        m.forEach((match, groupIndex) => {
+            console.log(`Found match, group ${groupIndex}: ${match}`);
+            matches.unshift(match)
+        });
+    }
+    matches.forEach((m: string) => {
+        if (outerHtml.indexOf(m) !== -1) {
+            let index = outerHtml.indexOf(m)
+            outerHtml = outerHtml.split('')
+            outerHtml.splice(index + m.length - 1, 0, '/')
+            outerHtml = outerHtml.join('');
+        }
+    })
+    return outerHtml;
+}
+
+function fixStyle(outerHtml: any): any {
+    const regex = /style\=\"[(a-zA-Z )=":\/\-\.0-9?&;\\(\),%\']*\"/gm;
+
+    // Alternative syntax using RegExp constructor
+    // const regex = new RegExp('\\<img[(a-zA-Z )=":\\/\\-\\.0-9?&;]*>', 'gm')
+
+    const str = outerHtml;
+    let m;
+    let matches: string[] = [];
+
+    while ((m = regex.exec(str)) !== null) {
+        // This is necessary to avoid infinite loops with zero-width matches
+        if (m.index === regex.lastIndex) {
+            regex.lastIndex++;
+        }
+
+        // The result can be accessed through the `m`-variable.
+        m.forEach((match, groupIndex) => {
+            console.log(`Found match, group ${groupIndex}: ${match}`);
+            matches.unshift(match)
+        });
+    }
+    matches.forEach((m: string) => {
+        if (outerHtml.indexOf(m) !== -1) {
+            let index = outerHtml.indexOf(m)
+            outerHtml = outerHtml.split('')
+            let obj = convertStyleToObj(m);
+            let style_text = `style={${JSON.stringify(obj)}}`;
+            outerHtml.splice(index, m.length, style_text);
+            outerHtml = outerHtml.join('');
+        }
+    })
+    return outerHtml;
+}
+function convertStyleToObj(m: string) {
+    m = m.split('=')[1];
+    m = m.replace(/['"]+/g, '')
+    let styles = m.split(';');
+    let object: any = {};
+    styles.map((s: string) => {
+        let parts = s.split(':');
+        let name = parts[0].trim();
+        let value = `${parts[1]}`.trim();
+        let temp_name = name.split('-');
+        temp_name = temp_name.map((a, i) => {
+            if (i) {
+                return `${a[0].toUpperCase()}${a.substring(1)}`;
+            }
+            return a;
+        });
+        if (temp_name.join('')) {
+            object[temp_name.join('')] = value;
+        }
+    });
+    delete object[""]
+    return object;
 }
