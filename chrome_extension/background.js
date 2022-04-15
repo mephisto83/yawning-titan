@@ -15,14 +15,14 @@ console.log(chrome);
 if (chrome.action) {
     // // listen for our browerAction to be clicked
     // chrome.action.onClicked.addListener(function (tab) {
-    //     // for the current tab, inject the "inject.js" file & execute it
+    //     // for the current tab, inject the "index.js" file & execute it
     //     console.log('chrome.browserAction.onClicked')
     //     doInCurrentTab((tab) => {
     //         console.log(tab);
     //         chrome.scripting.executeScript(
     //             {
     //                 target: { tabId: tab.id },
-    //                 files: ['inject.js'],
+    //                 files: ['index.js'],
     //             },
     //             () => { });
 

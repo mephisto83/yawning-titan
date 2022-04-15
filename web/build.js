@@ -2,8 +2,8 @@ var fs = require('fs');
 var path = require('path');
 
 const chrome_folder = '../chrome_extension';
-const target_file_name = 'inject.js';
-const target_file_name_map = 'inject.js';
+const target_file_name = 'index.js';
+const target_file_name_map = 'index.js';
 const source_file = './dist/index.js';
 
 let content = fs.readFileSync(source_file, 'utf-8');
