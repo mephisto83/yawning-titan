@@ -216,7 +216,7 @@ function loadStyleSheets(local) {
         let links = yield loadLinks(local);
         result.push(...links);
         console.log(`stylesheets found: ` + result.length);
-        let styled = document.querySelectorAll('style[data-styled]');
+        let styled = document.querySelectorAll('style');
         console.log(styled);
         console.log(styled.length);
         for (let i = 0; i < styled.length; i++) {
@@ -329,7 +329,7 @@ function fixImgTags(outerHtml) {
     return outerHtml;
 }
 function fixStyle(outerHtml) {
-    const regex = /style\=\"[(a-zA-Z )=":\/\-\.0-9?&;\\(\),%\']*\"/gm;
+    const regex = /style\=\"[(a-zA-Z )#=":\/\-\.0-9?_&;\\(\),%\']*\"/gm;
     // Alternative syntax using RegExp constructor
     // const regex = new RegExp('\\<img[(a-zA-Z )=":\\/\\-\\.0-9?&;]*>', 'gm')
     const str = outerHtml;

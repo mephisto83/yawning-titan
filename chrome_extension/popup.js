@@ -7,7 +7,7 @@ let componentNameInput = document.querySelector('.component-name');
 let cssSelectorInput = document.querySelector('.css-selector');
 function exec(name, className, pause, toplevel) {
     return yawningTitan({
-        // local: 'http://localhost:16552/',
+        local: 'http://localhost:16552/',
         depth: parseInt(toplevel) ? parseInt(toplevel) : 0,
         pause: pause || false,
         name: name || 'Component',
