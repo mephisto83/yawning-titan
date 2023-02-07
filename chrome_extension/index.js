@@ -47,6 +47,7 @@ function yawningTitan(args) {
                     unique_rules.push(item);
                 }
             });
+            console.log('build outer html');
             let outerHtml = el.outerHTML || '';
             if (depth === 0) {
                 outerHtml = el.outerHTML.replaceAll(el.innerHTML, '{props.children}');
@@ -60,7 +61,9 @@ function yawningTitan(args) {
                 { from: '="0"', to: '={0}' }].forEach((item) => {
                 outerHtml = (outerHtml).replaceAll(item.from, item.to);
             });
+            console.log('fix img tags');
             outerHtml = fixImgTags(outerHtml);
+            console.log('fix styles');
             outerHtml = fixStyle(outerHtml);
             let output = {
                 css: `${className}{
@@ -75,11 +78,14 @@ function yawningTitan(args) {
                 );
             }`
             };
+            console.log('store local');
             if (local) {
+                console.log('storing');
                 yield storeLocal(local, {
                     data: JSON.stringify(output)
                 });
             }
+            console.log('complete');
             return output;
         }
         else {
@@ -88,6 +94,7 @@ function yawningTitan(args) {
     });
 }
 function deepYawn(el, cssRules, depth) {
+    console.log('deep yawn');
     let rules = [];
     let elementCss = putTogetherCssRules(cssRules, el);
     rules.push(...elementCss);
@@ -335,16 +342,22 @@ function fixStyle(outerHtml) {
     const str = outerHtml;
     let m;
     let matches = [];
-    while ((m = regex.exec(str)) !== null) {
-        // This is necessary to avoid infinite loops with zero-width matches
-        if (m.index === regex.lastIndex) {
-            regex.lastIndex++;
+    console.log('fix styles');
+    try {
+        while ((m = regex.exec(str)) !== null) {
+            // This is necessary to avoid infinite loops with zero-width matches
+            if (m.index === regex.lastIndex) {
+                regex.lastIndex++;
+            }
+            // The result can be accessed through the `m`-variable.
+            m.forEach((match, groupIndex) => {
+                // console.log(`Found match, group ${groupIndex}: ${match}`);
+                matches.unshift(match);
+            });
         }
-        // The result can be accessed through the `m`-variable.
-        m.forEach((match, groupIndex) => {
-            console.log(`Found match, group ${groupIndex}: ${match}`);
-            matches.unshift(match);
-        });
+    }
+    catch (e) {
+        console.log(e);
     }
     matches.forEach((m) => {
         if (outerHtml.indexOf(m) !== -1) {
@@ -359,25 +372,31 @@ function fixStyle(outerHtml) {
     return outerHtml;
 }
 function convertStyleToObj(m) {
-    m = m.split('=')[1];
-    m = m.replace(/['"]+/g, '');
-    let styles = m.split(';');
+    console.log('convertStyleToObj');
     let object = {};
-    styles.map((s) => {
-        let parts = s.split(':');
-        let name = parts[0].trim();
-        let value = `${parts[1]}`.trim();
-        let temp_name = name.split('-');
-        temp_name = temp_name.map((a, i) => {
-            if (i) {
-                return `${a[0].toUpperCase()}${a.substring(1)}`;
+    try {
+        m = m.split('=')[1];
+        m = m.replace(/['"]+/g, '');
+        let styles = m.split(';');
+        styles.map((s) => {
+            let parts = s.split(':');
+            let name = parts[0].trim();
+            let value = `${parts[1]}`.trim();
+            let temp_name = name.split('-');
+            temp_name = temp_name.map((a, i) => {
+                if (i) {
+                    return `${a[0].toUpperCase()}${a.substring(1)}`;
+                }
+                return a;
+            });
+            if (temp_name.join('')) {
+                object[temp_name.join('')] = value;
             }
-            return a;
         });
-        if (temp_name.join('')) {
-            object[temp_name.join('')] = value;
-        }
-    });
+    }
+    catch (e) {
+        console.log(e);
+    }
     delete object[""];
     return object;
 }

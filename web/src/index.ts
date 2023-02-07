@@ -46,6 +46,7 @@ async function yawningTitan(args: {
                 unique_rules.push(item);
             }
         });
+        console.log('build outer html')
         let outerHtml: any = el.outerHTML || '';
         if (depth === 0) {
             outerHtml = (el.outerHTML as any).replaceAll(el.innerHTML, '{props.children}');
@@ -59,7 +60,9 @@ async function yawningTitan(args: {
         { from: '="0"', to: '={0}' }].forEach((item) => {
             outerHtml = (outerHtml).replaceAll(item.from, item.to)
         });
+        console.log('fix img tags')
         outerHtml = fixImgTags(outerHtml);
+        console.log('fix styles')
         outerHtml = fixStyle(outerHtml);
         let output = {
             css: `${className}{
@@ -74,12 +77,14 @@ async function yawningTitan(args: {
                 );
             }`
         }
+        console.log('store local')
         if (local) {
+            console.log('storing')
             await storeLocal(local, {
                 data: JSON.stringify(output)
             });
         }
-
+        console.log('complete');
 
         return output;
     }
@@ -89,6 +94,7 @@ async function yawningTitan(args: {
 }
 
 function deepYawn(el: any, cssRules: any, depth: number) {
+    console.log('deep yawn')
     let rules: string[] = [];
     let elementCss = putTogetherCssRules(cssRules, el);
     rules.push(...elementCss);
@@ -339,18 +345,22 @@ function fixStyle(outerHtml: any): any {
     const str = outerHtml;
     let m;
     let matches: string[] = [];
+    console.log('fix styles');
+    try {
+        while ((m = regex.exec(str)) !== null) {
+            // This is necessary to avoid infinite loops with zero-width matches
+            if (m.index === regex.lastIndex) {
+                regex.lastIndex++;
+            }
 
-    while ((m = regex.exec(str)) !== null) {
-        // This is necessary to avoid infinite loops with zero-width matches
-        if (m.index === regex.lastIndex) {
-            regex.lastIndex++;
+            // The result can be accessed through the `m`-variable.
+            m.forEach((match, groupIndex) => {
+                // console.log(`Found match, group ${groupIndex}: ${match}`);
+                matches.unshift(match)
+            });
         }
-
-        // The result can be accessed through the `m`-variable.
-        m.forEach((match, groupIndex) => {
-            console.log(`Found match, group ${groupIndex}: ${match}`);
-            matches.unshift(match)
-        });
+    } catch (e) {
+        console.log(e);
     }
     matches.forEach((m: string) => {
         if (outerHtml.indexOf(m) !== -1) {
@@ -365,25 +375,31 @@ function fixStyle(outerHtml: any): any {
     return outerHtml;
 }
 function convertStyleToObj(m: string) {
-    m = m.split('=')[1];
-    m = m.replace(/['"]+/g, '')
-    let styles = m.split(';');
+    console.log('convertStyleToObj')
     let object: any = {};
-    styles.map((s: string) => {
-        let parts = s.split(':');
-        let name = parts[0].trim();
-        let value = `${parts[1]}`.trim();
-        let temp_name = name.split('-');
-        temp_name = temp_name.map((a, i) => {
-            if (i) {
-                return `${a[0].toUpperCase()}${a.substring(1)}`;
+    try {
+        m = m.split('=')[1];
+        m = m.replace(/['"]+/g, '')
+        let styles = m.split(';');
+        styles.map((s: string) => {
+            let parts = s.split(':');
+            let name = parts[0].trim();
+            let value = `${parts[1]}`.trim();
+            let temp_name = name.split('-');
+            temp_name = temp_name.map((a, i) => {
+                if (i) {
+                    return `${a[0].toUpperCase()}${a.substring(1)}`;
+                }
+                return a;
+            });
+            if (temp_name.join('')) {
+                object[temp_name.join('')] = value;
             }
-            return a;
         });
-        if (temp_name.join('')) {
-            object[temp_name.join('')] = value;
-        }
-    });
+    }
+    catch (e) {
+        console.log(e);
+    }
     delete object[""]
     return object;
 }

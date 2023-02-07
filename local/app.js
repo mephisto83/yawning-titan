@@ -3,7 +3,9 @@ var express = require("express");
 var fs = require('fs');
 var path = require('path');
 var cors = require('cors');
-const component_folder = `c:/dev/component-folder`
+
+var isWin = process.platform === "win32";
+const component_folder = isWin ? `c:/dev/component-folder` : '/Users/andrewporter/Documents/GitHub/HausOfPetty/hausofpetty/src/components'
 const bodyParser = require('body-parser')
 var app = express();
 app.use(bodyParser.json({ limit: '150mb' }));
